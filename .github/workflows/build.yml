@@ -16,8 +16,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - name: Build debug APK
-        run: gradle assembleDebug
+        shell: bash
+        run: gradle assembleDebug --console=plain 2>&1 | tee build.log
+      - name: Show the errors on the run page
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo '### Build errors'
+            echo '```'
+            grep -nE "^e: |What went wrong|error:|FAILED|Could not|not found|Unsupported" -A4 build.log | head -80
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: locate-and-text-debug-apk
